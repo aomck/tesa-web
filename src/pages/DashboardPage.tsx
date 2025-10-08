@@ -9,9 +9,11 @@ import {
   Alert,
   CircularProgress,
   Chip,
-  Grid
+  Grid,
+  IconButton
 } from '@mui/material';
 import { Icon } from '@iconify/react';
+import { useNavigate } from 'react-router-dom';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import MapComponent from '../components/MapComponent';
@@ -21,6 +23,7 @@ import { useSocket } from '../hooks/useSocket';
 import { type DetectionEvent, type DetectedObject } from '../types/detection';
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
   const [cameraId, setCameraId] = useState('550e8400-e29b-41d4-a716-446655440000');
   const [token, setToken] = useState('ff13b10a-95bc-4337-9b12-fda59ccc725e');
   const [isConnected, setIsConnected] = useState(false);
@@ -115,6 +118,13 @@ const DashboardPage = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column', p: 2 }}>
+        {/* Back Button */}
+        <Box sx={{ mb: 2 }}>
+          <IconButton onClick={() => navigate('/')} sx={{ color: 'primary.main' }}>
+            <Icon icon="mdi:arrow-left" width={28} />
+          </IconButton>
+        </Box>
+
         {/* Connection Form */}
         <Paper sx={{ p: 3, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
