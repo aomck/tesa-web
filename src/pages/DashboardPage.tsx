@@ -11,12 +11,18 @@ import {
   Chip,
   Grid,
   IconButton,
-  Collapse
+  Collapse,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import axios from 'axios';
 import MapComponent from '../components/MapComponent';
 import DetectionCard from '../components/DetectionCard';
 import ImageViewer from '../components/ImageViewer';
@@ -27,20 +33,26 @@ import { type DetectionEvent, type DetectedObject } from '../types/detection';
 const DashboardPage = () => {
   const navigate = useNavigate();
   const [cameraId, setCameraId] = useState('550e8400-e29b-41d4-a716-446655440000');
-  const [token, setToken] = useState('ff13b10a-95bc-4337-9b12-fda59ccc725e');
+  const [token, setToken] = useState('3ce795ef-473f-44e9-9a76-57528df1438d');
+  const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [filterExpanded, setFilterExpanded] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
+  const [newToken, setNewToken] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Fetch initial data
   const { data, isLoading, error, refetch } = useDetections(
     cameraId,
     token,
-    isConnected
+    isConnecting
   );
 
-  // Socket connection for real-time updates
+  // Socket connection for real-time updates (only after fully connected)
   const { realtimeData, isConnected: socketConnected } = useSocket(
     cameraId,
     isConnected
@@ -50,16 +62,28 @@ const DashboardPage = () => {
   const [allDetections, setAllDetections] = useState<DetectionEvent[]>([]);
 
   useEffect(() => {
-    if (data?.data) {
+    if (data?.data && isConnecting) {
+      // Data loaded successfully, mark as fully connected
       setAllDetections(data.data);
+      setIsConnecting(false);
+      setIsConnected(true);
     }
-  }, [data]);
+  }, [data, isConnecting]);
 
   useEffect(() => {
     if (realtimeData) {
       setAllDetections((prev) => [realtimeData, ...prev]);
     }
   }, [realtimeData]);
+
+  // Auto disconnect on connection error
+  useEffect(() => {
+    if (error && (isConnecting || isConnected)) {
+      setIsConnecting(false);
+      setIsConnected(false);
+      setAllDetections([]);
+    }
+  }, [error, isConnecting, isConnected]);
 
   // Filter detections by date range
   const filteredDetections = useMemo(() => {
@@ -105,17 +129,83 @@ const DashboardPage = () => {
 
   const handleConnect = () => {
     if (cameraId && token) {
-      setIsConnected(true);
+      setIsConnecting(true);
     }
   };
 
   const handleDisconnect = () => {
+    setIsConnecting(false);
     setIsConnected(false);
     setAllDetections([]);
   };
 
   const handleSearch = () => {
     refetch();
+  };
+
+  const handleClearData = async () => {
+    setActionLoading(true);
+    setActionMessage(null);
+    try {
+      const response = await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL}/object-detection/clear/${cameraId}`,
+        {
+          headers: {
+            'x-camera-token': token,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setActionMessage({ type: 'success', text: response.data.message });
+        setAllDetections([]);
+        setClearDialogOpen(false);
+      }
+    } catch (error: any) {
+      setActionMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Failed to clear data'
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleGenerateToken = async () => {
+    setActionLoading(true);
+    setActionMessage(null);
+    try {
+      const response = await axios.patch(
+        `${import.meta.env.VITE_API_BASE_URL}/object-detection/token/${cameraId}`,
+        {
+          token: token,
+        }
+      );
+
+      if (response.data.success) {
+        setNewToken(response.data.token);
+        setActionMessage({ type: 'success', text: response.data.message });
+      }
+    } catch (error: any) {
+      setActionMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Failed to generate token'
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCloseTokenDialog = () => {
+    const tokenWasGenerated = !!newToken;
+    setTokenDialogOpen(false);
+    setNewToken('');
+    setActionMessage(null);
+
+    // Disconnect if token was successfully generated
+    if (tokenWasGenerated) {
+      handleDisconnect();
+    }
   };
 
   return (
@@ -137,7 +227,7 @@ const DashboardPage = () => {
                 label="Camera ID"
                 value={cameraId}
                 onChange={(e) => setCameraId(e.target.value)}
-                disabled={isConnected}
+                disabled={isConnecting || isConnected}
                 placeholder="550e8400-e29b-41d4-a716-446655440000"
               />
             </Grid>
@@ -148,12 +238,12 @@ const DashboardPage = () => {
                 type="password"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                disabled={isConnected}
+                disabled={isConnecting || isConnected}
                 placeholder="your-camera-token-here"
               />
             </Grid>
             <Grid size={{ xs: 12, md: 2 }}>
-              {!isConnected ? (
+              {!isConnected && !isConnecting ? (
                 <Button
                   fullWidth
                   variant="contained"
@@ -162,6 +252,15 @@ const DashboardPage = () => {
                   startIcon={<Icon icon="mdi:connection" />}
                 >
                   Connect
+                </Button>
+              ) : isConnecting ? (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  disabled
+                  startIcon={<CircularProgress size={20} />}
+                >
+                  Connecting...
                 </Button>
               ) : (
                 <Button
@@ -178,7 +277,7 @@ const DashboardPage = () => {
           </Grid>
 
           {isConnected && (
-            <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <Chip
                 label={socketConnected ? 'Socket Connected' : 'Socket Disconnected'}
                 color={socketConnected ? 'success' : 'default'}
@@ -187,6 +286,24 @@ const DashboardPage = () => {
               <Typography variant="body2" color="text.secondary">
                 Total Detections: {allDetections.length}
               </Typography>
+              <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Icon icon="mdi:delete" />}
+                  onClick={() => setClearDialogOpen(true)}
+                >
+                  ลบข้อมูล
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<Icon icon="mdi:key-refresh" />}
+                  onClick={() => setTokenDialogOpen(true)}
+                >
+                  Generate Token
+                </Button>
+              </Box>
             </Box>
           )}
         </Paper>
@@ -197,14 +314,14 @@ const DashboardPage = () => {
           </Alert>
         )}
 
-        {isLoading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress />
-          </Box>
+        {actionMessage && (
+          <Alert severity={actionMessage.type} sx={{ mb: 3 }} onClose={() => setActionMessage(null)}>
+            {actionMessage.text}
+          </Alert>
         )}
 
         {/* Main Content */}
-        {isConnected && !isLoading && (
+        {isConnected && (
           <Grid container spacing={3} sx={{ flex: 1, overflow: 'hidden' }}>
             {/* Left Column - Map */}
             <Grid size={{ xs: 12, md: 8 }} sx={{ height: '100%' }}>
@@ -335,6 +452,93 @@ const DashboardPage = () => {
             </Grid>
           </Grid>
         )}
+
+        {/* Clear Data Confirmation Dialog */}
+        <Dialog
+          open={clearDialogOpen}
+          onClose={() => !actionLoading && setClearDialogOpen(false)}
+        >
+          <DialogTitle>ยืนยันการลบข้อมูล</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              คุณต้องการลบข้อมูลการตรวจจับทั้งหมดของกล้องนี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setClearDialogOpen(false)} disabled={actionLoading}>
+              ยกเลิก
+            </Button>
+            <Button
+              onClick={handleClearData}
+              color="error"
+              variant="contained"
+              disabled={actionLoading}
+              startIcon={actionLoading ? <CircularProgress size={16} /> : <Icon icon="mdi:delete" />}
+            >
+              {actionLoading ? 'กำลังลบ...' : 'ลบข้อมูล'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Generate Token Dialog */}
+        <Dialog
+          open={tokenDialogOpen}
+          onClose={() => !actionLoading && handleCloseTokenDialog()}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Generate New Token</DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ mb: 2 }}>
+              คุณต้องการสร้าง Token ใหม่สำหรับกล้องนี้หรือไม่? Token เดิมจะไม่สามารถใช้งานได้อีกต่อไป
+            </DialogContentText>
+            {newToken && (
+              <Box sx={{ mt: 2 }}>
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  Token ใหม่ถูกสร้างเรียบร้อยแล้ว กรุณาคัดลอกและเก็บรักษาไว้
+                </Alert>
+                <TextField
+                  fullWidth
+                  label="Token ใหม่"
+                  value={newToken}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  multiline
+                  rows={2}
+                  sx={{ mb: 1 }}
+                />
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<Icon icon="mdi:content-copy" />}
+                  onClick={() => {
+                    navigator.clipboard.writeText(newToken);
+                    setActionMessage({ type: 'success', text: 'คัดลอก Token แล้ว' });
+                  }}
+                >
+                  คัดลอก Token
+                </Button>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseTokenDialog} disabled={actionLoading}>
+              {newToken ? 'ปิด' : 'ยกเลิก'}
+            </Button>
+            {!newToken && (
+              <Button
+                onClick={handleGenerateToken}
+                color="primary"
+                variant="contained"
+                disabled={actionLoading}
+                startIcon={actionLoading ? <CircularProgress size={16} /> : <Icon icon="mdi:key-refresh" />}
+              >
+                {actionLoading ? 'กำลังสร้าง...' : 'สร้าง Token'}
+              </Button>
+            )}
+          </DialogActions>
+        </Dialog>
       </Container>
     </LocalizationProvider>
   );

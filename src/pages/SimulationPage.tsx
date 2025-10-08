@@ -201,6 +201,12 @@ const SimulationPage = () => {
       console.error('Upload error:', error);
       setStatus('error');
       setStatusMessage(`เกิดข้อผิดพลาด: ${error.response?.data?.message || error.message}`);
+
+      // Stop simulation if 401 Unauthorized error
+      if (error.response?.status === 401) {
+        handleStop();
+        setStatusMessage('หยุดการจำลอง: Token ไม่ถูกต้องหรือหมดอายุ');
+      }
     }
   }, [config.api_base_url, config.camera_id, config.camera_token]);
 
