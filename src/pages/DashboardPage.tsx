@@ -29,6 +29,7 @@ import ImageViewer from '../components/ImageViewer';
 import { useDetections } from '../hooks/useDetections';
 import { useSocket } from '../hooks/useSocket';
 import { type DetectionEvent, type DetectedObject } from '../types/detection';
+import { formatThaiDateTime } from '../utils/dateFormat';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -404,7 +405,7 @@ const DashboardPage = () => {
                   <Box sx={{ p: 2, pt: 1 }}>
                     <Typography variant="body2" color="text.secondary">
                       <Icon icon="mdi:clock-outline" width={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                      {new Date(new Date(filteredDetections[0].timestamp).getTime() - 7 * 60 * 60 * 1000).toLocaleString('th-TH')}
+                      {formatThaiDateTime(filteredDetections[0].timestamp)}
                     </Typography>
                   </Box>
                 </Paper>
