@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -66,6 +66,17 @@ const SimulationPage = () => {
 
   const intervalRef = useRef<number | null>(null);
   const imageIndexRef = useRef(0);
+  const imagesRef = useRef<File[]>([]);
+  const trackersRef = useRef<ObjectTracker[]>([]);
+
+  // Sync refs with state
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
+  useEffect(() => {
+    trackersRef.current = trackers;
+  }, [trackers]);
 
   useEffect(() => {
     // Initialize trackers when num_objects changes
@@ -128,18 +139,22 @@ const SimulationPage = () => {
     setImagePreviews(newPreviews);
   };
 
-  const uploadDetection = async () => {
-    if (images.length === 0) {
+  const uploadDetection = useCallback(async () => {
+    if (imagesRef.current.length === 0) {
       setStatus('error');
       setStatusMessage('กรุณาอัพโหลดรูปภาพก่อน');
       return;
     }
 
     try {
-      const currentImage = images[imageIndexRef.current % images.length];
+      const currentIndex = imageIndexRef.current % imagesRef.current.length;
+      const currentImage = imagesRef.current[currentIndex];
+
+      console.log('Uploading image:', currentIndex + 1, '/', imagesRef.current.length, '-', currentImage.name);
+      console.log('Current imageIndexRef.current:', imageIndexRef.current);
 
       // Move all trackers
-      const movedTrackers = trackers.map(moveTracker);
+      const movedTrackers = trackersRef.current.map(moveTracker);
       setTrackers(movedTrackers);
 
       // Prepare objects data
@@ -168,17 +183,26 @@ const SimulationPage = () => {
         },
       });
 
-      if (response.status === 200) {
-        setStatus('success');
-        setStatusMessage(`อัพโหลดสำเร็จ: ${currentImage.name} (${objects.length} วัตถุ)`);
-        setLastUploadTime(new Date());
+      console.log('Response status:', response.status);
+
+      if (response.status === 200 || response.status === 201) {
+        console.log('Upload successful, incrementing index from', imageIndexRef.current);
         imageIndexRef.current += 1;
+        console.log('After increment, imageIndexRef.current:', imageIndexRef.current);
+
+        setStatus('success');
+        const nextIndex = imageIndexRef.current % imagesRef.current.length;
+        setStatusMessage(`อัพโหลดสำเร็จ: ${currentImage.name} (${objects.length} วัตถุ) - รูปถัดไป: ${nextIndex + 1}/${imagesRef.current.length}`);
+        setLastUploadTime(new Date());
+      } else {
+        console.log('Upload failed with status:', response.status);
       }
     } catch (error: any) {
+      console.error('Upload error:', error);
       setStatus('error');
       setStatusMessage(`เกิดข้อผิดพลาด: ${error.response?.data?.message || error.message}`);
     }
-  };
+  }, [config.api_base_url, config.camera_id, config.camera_token]);
 
   const handleStart = () => {
     if (images.length === 0) {
@@ -187,9 +211,10 @@ const SimulationPage = () => {
       return;
     }
 
+    console.log('Starting simulation, resetting index to 0');
+    imageIndexRef.current = 0;
     setIsRunning(true);
     setStatus(null);
-    imageIndexRef.current = 0;
 
     // First upload
     uploadDetection();
@@ -473,26 +498,16 @@ const SimulationPage = () => {
               การควบคุม
             </Typography>
 
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Box sx={{ mb: 2 }}>
               <Button
                 variant="contained"
-                color="success"
-                startIcon={<Icon icon="mdi:play" />}
-                onClick={handleStart}
-                disabled={isRunning || images.length === 0}
+                color={isRunning ? 'error' : 'success'}
+                startIcon={<Icon icon={isRunning ? 'mdi:stop' : 'mdi:play'} />}
+                onClick={isRunning ? handleStop : handleStart}
+                disabled={!isRunning && images.length === 0}
                 fullWidth
               >
-                เริ่มการจำลอง
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<Icon icon="mdi:stop" />}
-                onClick={handleStop}
-                disabled={!isRunning}
-                fullWidth
-              >
-                หยุดการจำลอง
+                {isRunning ? 'หยุดการจำลอง' : 'เริ่มการจำลอง'}
               </Button>
             </Box>
 

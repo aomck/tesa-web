@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { type DetectedObject } from '../types/detection';
+import ImageViewer from './ImageViewer';
 
 interface DetectionPopupProps {
   object: DetectedObject;
@@ -36,15 +37,12 @@ const DetectionPopup = ({ object, imagePath }: DetectionPopupProps) => {
   return (
     <Card sx={{ minWidth: 280 }}>
       {imageUrl && (
-        <Box
-          component="img"
+        <ImageViewer
           src={imageUrl}
           alt="Detection"
-          sx={{
-            width: '100%',
-            height: 150,
-            objectFit: 'cover',
-          }}
+          width="100%"
+          height={150}
+          objectFit="cover"
         />
       )}
 

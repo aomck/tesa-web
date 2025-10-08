@@ -10,7 +10,8 @@ import {
   CircularProgress,
   Chip,
   Grid,
-  IconButton
+  IconButton,
+  Collapse
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +19,7 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import MapComponent from '../components/MapComponent';
 import DetectionCard from '../components/DetectionCard';
+import ImageViewer from '../components/ImageViewer';
 import { useDetections } from '../hooks/useDetections';
 import { useSocket } from '../hooks/useSocket';
 import { type DetectionEvent, type DetectedObject } from '../types/detection';
@@ -29,6 +31,7 @@ const DashboardPage = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [filterExpanded, setFilterExpanded] = useState(false);
 
   // Fetch initial data
   const { data, isLoading, error, refetch } = useDetections(
@@ -221,33 +224,74 @@ const DashboardPage = () => {
 
             {/* Right Column - Filters and Feed */}
             <Grid size={{ xs: 12, md: 4 }} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              {/* Date Filters */}
-              <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Filter by Date
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <DatePicker
-                    label="Start Date"
-                    value={startDate}
-                    onChange={(newValue) => setStartDate(newValue)}
-                    slotProps={{ textField: { fullWidth: true } }}
-                  />
-                  <DatePicker
-                    label="End Date"
-                    value={endDate}
-                    onChange={(newValue) => setEndDate(newValue)}
-                    slotProps={{ textField: { fullWidth: true } }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleSearch}
-                    startIcon={<Icon icon="mdi:magnify" />}
-                  >
-                    Search
-                  </Button>
+              {/* Date Filters - Collapsible */}
+              <Paper sx={{ mb: 2 }}>
+                <Box
+                  sx={{
+                    p: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setFilterExpanded(!filterExpanded)}
+                >
+                  <Typography variant="h6">
+                    Filter by Date
+                  </Typography>
+                  <IconButton size="small">
+                    <Icon icon={filterExpanded ? 'mdi:chevron-up' : 'mdi:chevron-down'} width={24} />
+                  </IconButton>
                 </Box>
+                <Collapse in={filterExpanded}>
+                  <Box sx={{ p: 2, pt: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <DatePicker
+                      label="Start Date"
+                      value={startDate}
+                      onChange={(newValue) => setStartDate(newValue)}
+                      slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+                    />
+                    <DatePicker
+                      label="End Date"
+                      value={endDate}
+                      onChange={(newValue) => setEndDate(newValue)}
+                      slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={handleSearch}
+                      startIcon={<Icon icon="mdi:magnify" />}
+                      size="small"
+                    >
+                      Search
+                    </Button>
+                  </Box>
+                </Collapse>
               </Paper>
+
+              {/* Last Image */}
+              {filteredDetections.length > 0 && filteredDetections[0].image_path && (
+                <Paper sx={{ mb: 2, overflow: 'hidden' }}>
+                  <Box sx={{ p: 2, pb: 1 }}>
+                    <Typography variant="h6">
+                      Last Image
+                    </Typography>
+                  </Box>
+                  <ImageViewer
+                    src={`${import.meta.env.VITE_API_BASE_URL.replace('/api', '')}${filteredDetections[0].image_path}`}
+                    alt="Last Detection"
+                    width="100%"
+                    objectFit="contain"
+                    style={{ maxHeight: '300px' }}
+                  />
+                  <Box sx={{ p: 2, pt: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      <Icon icon="mdi:clock-outline" width={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                      {new Date(filteredDetections[0].timestamp).toLocaleString('th-TH')}
+                    </Typography>
+                  </Box>
+                </Paper>
+              )}
 
               {/* Detection Feed */}
               <Paper sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
