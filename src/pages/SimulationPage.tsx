@@ -59,12 +59,12 @@ const SimulationPage = () => {
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<'success' | 'error' | null>(null);
   const [lastUploadTime, setLastUploadTime] = useState<Date | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [trackers, setTrackers] = useState<ObjectTracker[]>([]);
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<number | null>(null);
   const imageIndexRef = useRef(0);
 
   useEffect(() => {
@@ -188,7 +188,7 @@ const SimulationPage = () => {
     }
 
     setIsRunning(true);
-    setStatus('idle');
+    setStatus(null);
     imageIndexRef.current = 0;
 
     // First upload
@@ -213,7 +213,7 @@ const SimulationPage = () => {
       }
 
       // Set new interval with updated config
-      intervalRef.current = setInterval(() => {
+      intervalRef.current = window.setInterval(() => {
         uploadDetection();
       }, config.upload_interval * 1000);
     }
@@ -511,8 +511,14 @@ const SimulationPage = () => {
                   />
                 </Box>
 
-                {statusMessage && (
+                {statusMessage && status && (
                   <Alert severity={status} sx={{ mb: 2 }}>
+                    {statusMessage}
+                  </Alert>
+                )}
+
+                {statusMessage && !status && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
                     {statusMessage}
                   </Alert>
                 )}
