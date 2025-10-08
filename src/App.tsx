@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import SimulationPage from './pages/SimulationPage';
+import ClearPage from './pages/ClearPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +37,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/simulation" element={<SimulationPage />} />
+            <Route path="/clear" element={<ClearPage />} />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>
