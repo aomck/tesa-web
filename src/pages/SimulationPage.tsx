@@ -47,7 +47,7 @@ const SimulationPage = () => {
   const [config, setConfig] = useState<SimulationConfig>({
     api_base_url: import.meta.env.VITE_API_BASE_URL || 'https://tesa-api.crma.dev/api',
     camera_id: '550e8400-e29b-41d4-a716-446655440000',
-    camera_token: 'ff13b10a-95bc-4337-9b12-fda59ccc725e',
+    camera_token: '3ce795ef-473f-44e9-9a76-57528df1438d',
     upload_interval: 3,
     center_lat: 14.297567,
     center_lng: 101.166279,
