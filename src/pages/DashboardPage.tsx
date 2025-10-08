@@ -404,7 +404,7 @@ const DashboardPage = () => {
                   <Box sx={{ p: 2, pt: 1 }}>
                     <Typography variant="body2" color="text.secondary">
                       <Icon icon="mdi:clock-outline" width={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                      {new Date(filteredDetections[0].timestamp).toLocaleString('th-TH')}
+                      {new Date(new Date(filteredDetections[0].timestamp).getTime() - 7 * 60 * 60 * 1000).toLocaleString('th-TH')}
                     </Typography>
                   </Box>
                 </Paper>
