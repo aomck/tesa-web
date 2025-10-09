@@ -21,15 +21,15 @@ const BattleFieldPage = () => {
       p: 2
     }}>
       {/* Back Button */}
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 0 }}>
         <IconButton onClick={() => navigate('/')} sx={{ color: 'primary.main' }}>
           <Icon icon="mdi:arrow-left" width={28} />
         </IconButton>
       </Box>
 
       {/* Title */}
-      <Box sx={{ textAlign: 'center', mb: 3 }}>
-        <Typography variant="h3" component="h1" fontWeight="bold">
+      <Box sx={{ textAlign: 'center', mb: 1 }}>
+        <Typography variant="h3" component="h3" fontWeight="bold">
           Battle Field
         </Typography>
       </Box>
