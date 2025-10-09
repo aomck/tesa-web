@@ -23,7 +23,7 @@ const ClearPage = () => {
 
   // Set document title
   useEffect(() => {
-    document.title = 'Tesa 2025 @ CRMA - Clear Data';
+    document.title = 'Clear Data - Tesa 2025 @ CRMA';
   }, []);
 
   const handleClear = async () => {

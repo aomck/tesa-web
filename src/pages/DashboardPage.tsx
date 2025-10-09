@@ -52,7 +52,7 @@ const DashboardPage = ({ info }: DashboardPageProps = {}) => {
 
   // Set document title
   useEffect(() => {
-    document.title = 'Tesa 2025 @ CRMA - Dashboard';
+    document.title = 'Dashboard - Tesa 2025 @ CRMA';
   }, []);
 
   // Fetch initial data

@@ -73,7 +73,7 @@ const SimulationPage = () => {
 
   // Set document title
   useEffect(() => {
-    document.title = 'Tesa 2025 @ CRMA - Simulation';
+    document.title = 'Simulation - Tesa 2025 @ CRMA';
   }, []);
 
   // Sync refs with state

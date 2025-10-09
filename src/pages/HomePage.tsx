@@ -8,7 +8,7 @@ const HomePage = () => {
 
   // Set document title
   useEffect(() => {
-    document.title = 'Tesa 2025 @ CRMA - Home';
+    document.title = 'Tesa 2025 @ CRMA';
   }, []);
 
   const menuItems = [

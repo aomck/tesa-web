@@ -9,7 +9,7 @@ const BattleFieldPage = () => {
 
   // Set document title
   useEffect(() => {
-    document.title = 'Tesa 2025 @ CRMA - Battle Field';
+    document.title = 'Battle Field - Tesa 2025 @ CRMA';
   }, []);
 
   return (
