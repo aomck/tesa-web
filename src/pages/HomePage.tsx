@@ -1,9 +1,15 @@
+import { useEffect } from 'react';
 import { Container, Grid, Card, CardContent, CardActionArea, Typography, Box } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 
 const HomePage = () => {
   const navigate = useNavigate();
+
+  // Set document title
+  useEffect(() => {
+    document.title = 'Tesa 2025 @ CRMA - Home';
+  }, []);
 
   const menuItems = [
     {
@@ -19,6 +25,13 @@ const HomePage = () => {
       icon: 'mdi:play-circle',
       path: '/simulation',
       color: '#dc004e',
+    },
+    {
+      title: 'Battle Field',
+      description: 'ติดตามสถานการณ์สนามรบแบบเรียลไทม์',
+      icon: 'mdi:sword-cross',
+      path: '/battlefield',
+      color: '#f57c00',
     },
   ];
 
@@ -36,7 +49,7 @@ const HomePage = () => {
 
         <Grid container spacing={4}>
           {menuItems.map((item) => (
-            <Grid key={item.path} size={{ xs: 12, sm: 6 }}>
+            <Grid key={item.path} size={{ xs: 12, sm: 6, md: 4 }}>
               <Card
                 sx={{
                   height: '100%',

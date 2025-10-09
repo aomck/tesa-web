@@ -31,7 +31,11 @@ import { useSocket } from '../hooks/useSocket';
 import { type DetectionEvent, type DetectedObject, type Camera } from '../types/detection';
 import { formatThaiDateTime } from '../utils/dateFormat';
 
-const DashboardPage = () => {
+interface DashboardPageProps {
+  info?: 'left' | 'right';
+}
+
+const DashboardPage = ({ info }: DashboardPageProps = {}) => {
   const navigate = useNavigate();
   const [cameraId, setCameraId] = useState('550e8400-e29b-41d4-a716-446655440000');
   const [token, setToken] = useState('3ce795ef-473f-44e9-9a76-57528df1438d');
@@ -45,6 +49,11 @@ const DashboardPage = () => {
   const [newToken, setNewToken] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Set document title
+  useEffect(() => {
+    document.title = 'Tesa 2025 @ CRMA - Dashboard';
+  }, []);
 
   // Fetch initial data
   const { data, isLoading, error, refetch } = useDetections(
@@ -235,13 +244,21 @@ const DashboardPage = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column', p: 2 }}>
-        {/* Back Button */}
-        <Box sx={{ mb: 2 }}>
-          <IconButton onClick={() => navigate('/')} sx={{ color: 'primary.main' }}>
-            <Icon icon="mdi:arrow-left" width={28} />
-          </IconButton>
-        </Box>
+      <Container maxWidth={false} disableGutters sx={{
+       height: info ? '100%' : '100vh',
+       minHeight: info ? { xs: 'auto', lg: '100vh' } : 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        p: 2
+      }}>
+        {/* Back Button - Hidden when info prop is provided */}
+        {!info && (
+          <Box sx={{ mb: 2 }}>
+            <IconButton onClick={() => navigate('/')} sx={{ color: 'primary.main' }}>
+              <Icon icon="mdi:arrow-left" width={28} />
+            </IconButton>
+          </Box>
+        )}
 
         {/* Team Banner */}
         {isConnected && cameraInfo && (
@@ -367,9 +384,14 @@ const DashboardPage = () => {
 
         {/* Main Content */}
         {isConnected && (
-          <Grid container spacing={3} sx={{ flex: 1, overflow: 'hidden' }}>
-            {/* Left Column - Map */}
-            <Grid size={{ xs: 12, md: 8 }} sx={{ height: '100%' }}>
+          <Grid container spacing={3} sx={{
+            flex: 1,
+            overflow: { xs: 'visible', md: 'hidden' },
+            pb: { xs: 2, md: 0 },
+            flexDirection: info === 'left' ? 'row-reverse' : 'row'
+          }}>
+            {/* Map Column */}
+            <Grid size={{ xs: 12, md: 8 }} sx={{ height: { xs: '500px', md: '100%' } }}>
               <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   Detection Map
@@ -385,8 +407,13 @@ const DashboardPage = () => {
               </Paper>
             </Grid>
 
-            {/* Right Column - Filters and Feed */}
-            <Grid size={{ xs: 12, md: 4 }} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Filters and Feed Column */}
+            <Grid size={{ xs: 12, md: 4 }} sx={{
+              height: { xs: 'auto', md: '100%' },
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: { xs: '600px', md: 'auto' }
+            }}>
               {/* Date Filters - Collapsible */}
               <Paper sx={{ mb: 2 }}>
                 <Box
@@ -457,7 +484,14 @@ const DashboardPage = () => {
               )}
 
               {/* Detection Feed */}
-              <Paper sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <Paper sx={{
+                p: 2,
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                minHeight: { xs: '400px', md: 'auto' }
+              }}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   Detection Feed
                 </Typography>
@@ -465,6 +499,7 @@ const DashboardPage = () => {
                   sx={{
                     flex: 1,
                     overflowY: 'auto',
+                    minHeight: { xs: '300px', md: 'auto' },
                     '&::-webkit-scrollbar': {
                       width: '8px',
                     },

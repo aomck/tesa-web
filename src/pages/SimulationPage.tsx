@@ -71,6 +71,11 @@ const SimulationPage = () => {
   const imagesRef = useRef<File[]>([]);
   const trackersRef = useRef<ObjectTracker[]>([]);
 
+  // Set document title
+  useEffect(() => {
+    document.title = 'Tesa 2025 @ CRMA - Simulation';
+  }, []);
+
   // Sync refs with state
   useEffect(() => {
     imagesRef.current = images;

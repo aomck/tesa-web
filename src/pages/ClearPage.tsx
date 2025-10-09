@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Container,
   Paper,
@@ -20,6 +20,11 @@ const ClearPage = () => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+
+  // Set document title
+  useEffect(() => {
+    document.title = 'Tesa 2025 @ CRMA - Clear Data';
+  }, []);
 
   const handleClear = async () => {
     if (!password) {
