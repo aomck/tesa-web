@@ -15,6 +15,11 @@ if (typeof window !== 'undefined') {
   }
 }
 
+const LOCATIONS = {
+  defence: { lng: 101.166279, lat: 14.297567 },
+  offence: { lng: 101.171298, lat: 14.286451 },
+};
+
 interface MapComponentProps {
   objects: DetectedObject[];
   imagePath?: string;
@@ -25,9 +30,10 @@ interface MapComponentProps {
     image_path: string;
     objects: DetectedObject[];
   }>;
+  cameraLocation?: string;
 }
 
-const MapComponent = ({ objects, imagePath, detections }: MapComponentProps) => {
+const MapComponent = ({ objects, imagePath, detections, cameraLocation }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
@@ -37,6 +43,12 @@ const MapComponent = ({ objects, imagePath, detections }: MapComponentProps) => 
 
   mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
+  const getMapCenter = () => {
+    if (cameraLocation === 'defence') return [LOCATIONS.defence.lng, LOCATIONS.defence.lat];
+    if (cameraLocation === 'offence') return [LOCATIONS.offence.lng, LOCATIONS.offence.lat];
+    return [101.166279, 14.297567]; // default
+  };
+
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -44,7 +56,7 @@ const MapComponent = ({ objects, imagePath, detections }: MapComponentProps) => 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-streets-v12',
-      center: [101.166279, 14.297567], // [lng, lat] ,
+      center: getMapCenter() as [number, number],
       zoom: 17,
     });
 
@@ -52,6 +64,17 @@ const MapComponent = ({ objects, imagePath, detections }: MapComponentProps) => 
       map.current?.remove();
     };
   }, []);
+
+  // Update map center when camera location changes
+  useEffect(() => {
+    if (map.current && cameraLocation) {
+      map.current.flyTo({
+        center: getMapCenter() as [number, number],
+        zoom: 17,
+        duration: 1000,
+      });
+    }
+  }, [cameraLocation]);
 
   useEffect(() => {
     if (!map.current) return;

@@ -8,9 +8,19 @@ export interface DetectedObject {
   details?: Record<string, any>;
 }
 
+export interface Camera {
+  id: string;
+  name?: string;
+  location?: string;
+  token?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface DetectionEvent {
   id: number;
   cam_id: string;
+  camera?: Camera;
   timestamp: string;
   image_path: string;
   objects: DetectedObject[];

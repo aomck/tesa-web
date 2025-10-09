@@ -20,6 +20,7 @@ import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 import MapPicker from '../components/MapPicker';
 import axios from 'axios';
+import { type Camera } from '../types/detection';
 
 interface SimulationConfig {
   api_base_url: string;
@@ -63,6 +64,7 @@ const SimulationPage = () => {
   const [lastUploadTime, setLastUploadTime] = useState<Date | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [trackers, setTrackers] = useState<ObjectTracker[]>([]);
+  const [cameraInfo, setCameraInfo] = useState<Camera | null>(null);
 
   const intervalRef = useRef<number | null>(null);
   const imageIndexRef = useRef(0);
@@ -79,13 +81,13 @@ const SimulationPage = () => {
   }, [trackers]);
 
   useEffect(() => {
-    // Initialize trackers when num_objects changes
+    // Initialize trackers when num_objects or camera location changes
     const newTrackers: ObjectTracker[] = [];
     for (let i = 0; i < config.num_objects; i++) {
       newTrackers.push(createTracker(i));
     }
     setTrackers(newTrackers);
-  }, [config.num_objects, config.center_lat, config.center_lng]);
+  }, [config.num_objects, config.center_lat, config.center_lng, cameraInfo?.location]);
 
   const createTracker = (index: number): ObjectTracker => {
     const angle = Math.random() * 2 * Math.PI;
@@ -93,12 +95,20 @@ const SimulationPage = () => {
     const latOffset = (distance / 111320) * Math.cos(angle);
     const lngOffset = (distance / (111320 * Math.cos((config.center_lat * Math.PI) / 180))) * Math.sin(angle);
 
+    // Determine objective based on camera location
+    let objective = 'unknown';
+    if (cameraInfo?.location === 'defence') {
+      objective = 'unknown';
+    } else if (cameraInfo?.location === 'offence') {
+      objective = 'our';
+    }
+
     return {
       obj_id: `obj_${String(index).padStart(3, '0')}`,
       type: 'drone',
       current_lat: config.center_lat + latOffset,
       current_lng: config.center_lng + lngOffset,
-      objective: ['surveillance', 'tracking', 'monitoring'][Math.floor(Math.random() * 3)],
+      objective: objective,
       size: ['small', 'medium', 'large'][Math.floor(Math.random() * 3)],
     };
   };
@@ -190,6 +200,11 @@ const SimulationPage = () => {
         imageIndexRef.current += 1;
         console.log('After increment, imageIndexRef.current:', imageIndexRef.current);
 
+        // Update camera info from response if available
+        if (response.data?.data?.camera) {
+          setCameraInfo(response.data.data.camera);
+        }
+
         setStatus('success');
         const nextIndex = imageIndexRef.current % imagesRef.current.length;
         setStatusMessage(`อัพโหลดสำเร็จ: ${currentImage.name} (${objects.length} วัตถุ) - รูปถัดไป: ${nextIndex + 1}/${imagesRef.current.length}`);
@@ -210,10 +225,60 @@ const SimulationPage = () => {
     }
   }, [config.api_base_url, config.camera_id, config.camera_token]);
 
-  const handleStart = () => {
+  const fetchCameraInfo = async () => {
+    try {
+      const response = await axios.get(
+        `${config.api_base_url}/object-detection/info/${config.camera_id}`,
+        {
+          headers: {
+            'x-camera-token': config.camera_token,
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const camera = response.data.data;
+        setCameraInfo(camera);
+
+        // Update center location based on camera location
+        if (camera.location === 'defence') {
+          setConfig((prev) => ({
+            ...prev,
+            center_lat: 14.297567,
+            center_lng: 101.166279,
+          }));
+        } else if (camera.location === 'offence') {
+          setConfig((prev) => ({
+            ...prev,
+            center_lat: 14.286451,
+            center_lng: 101.171298,
+          }));
+        }
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to fetch camera info:', error);
+      setStatus('error');
+      setStatusMessage('ไม่สามารถดึงข้อมูลกล้องได้ กรุณาตรวจสอบ Camera ID และ Token');
+      return false;
+    }
+  };
+
+  const handleStart = async () => {
     if (images.length === 0) {
       setStatus('error');
       setStatusMessage('กรุณาอัพโหลดรูปภาพก่อนเริ่มการจำลอง');
+      return;
+    }
+
+    // Fetch camera info first to determine location
+    setStatus(null);
+    setStatusMessage('กำลังตรวจสอบข้อมูลกล้อง...');
+    const success = await fetchCameraInfo();
+
+    if (!success) {
       return;
     }
 
@@ -233,6 +298,7 @@ const SimulationPage = () => {
       intervalRef.current = null;
     }
     setStatusMessage('หยุดการจำลอง');
+    setCameraInfo(null);
   };
 
   // Update interval when upload_interval config changes and simulation is running
@@ -270,6 +336,26 @@ const SimulationPage = () => {
           <Icon icon="mdi:arrow-left" width={28} />
         </IconButton>
       </Box>
+
+      {/* Team Banner */}
+      {isRunning && cameraInfo && (
+        <Box
+          sx={{
+            textAlign: 'center',
+            mb: 3,
+            py: 2,
+            px: 3,
+            bgcolor: cameraInfo.location === 'defence' ? '#1976d2' : '#d32f2f',
+            color: 'white',
+            borderRadius: 2,
+            boxShadow: 2,
+          }}
+        >
+          <Typography variant="h5" fontWeight="bold">
+            Team: {cameraInfo.name || 'Unknown'} - {cameraInfo.location === 'defence' ? 'Defence' : 'Offence'}
+          </Typography>
+        </Box>
+      )}
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h4" gutterBottom fontWeight="bold">
@@ -345,6 +431,7 @@ const SimulationPage = () => {
                 lat={config.center_lat}
                 lng={config.center_lng}
                 onLocationChange={(lat, lng) => setConfig({ ...config, center_lat: lat, center_lng: lng })}
+                cameraLocation={cameraInfo?.location}
               />
             </Box>
 

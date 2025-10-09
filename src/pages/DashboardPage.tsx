@@ -28,7 +28,7 @@ import DetectionCard from '../components/DetectionCard';
 import ImageViewer from '../components/ImageViewer';
 import { useDetections } from '../hooks/useDetections';
 import { useSocket } from '../hooks/useSocket';
-import { type DetectionEvent, type DetectedObject } from '../types/detection';
+import { type DetectionEvent, type DetectedObject, type Camera } from '../types/detection';
 import { formatThaiDateTime } from '../utils/dateFormat';
 
 const DashboardPage = () => {
@@ -61,6 +61,26 @@ const DashboardPage = () => {
 
   // Merge real-time data with fetched data
   const [allDetections, setAllDetections] = useState<DetectionEvent[]>([]);
+  const [cameraInfo, setCameraInfo] = useState<Camera | null>(null);
+
+  const fetchCameraInfo = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/object-detection/info/${cameraId}`,
+        {
+          headers: {
+            'x-camera-token': token,
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        setCameraInfo(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch camera info:', error);
+    }
+  };
 
   useEffect(() => {
     if (data?.data && isConnecting) {
@@ -68,6 +88,9 @@ const DashboardPage = () => {
       setAllDetections(data.data);
       setIsConnecting(false);
       setIsConnected(true);
+
+      // Fetch camera info separately
+      fetchCameraInfo();
     }
   }, [data, isConnecting]);
 
@@ -138,6 +161,7 @@ const DashboardPage = () => {
     setIsConnecting(false);
     setIsConnected(false);
     setAllDetections([]);
+    setCameraInfo(null);
   };
 
   const handleSearch = () => {
@@ -218,6 +242,26 @@ const DashboardPage = () => {
             <Icon icon="mdi:arrow-left" width={28} />
           </IconButton>
         </Box>
+
+        {/* Team Banner */}
+        {isConnected && cameraInfo && (
+          <Box
+            sx={{
+              textAlign: 'center',
+              mb: 3,
+              py: 2,
+              px: 3,
+              bgcolor: cameraInfo.location === 'defence' ? '#1976d2' : '#d32f2f',
+              color: 'white',
+              borderRadius: 2,
+              boxShadow: 2,
+            }}
+          >
+            <Typography variant="h5" fontWeight="bold">
+              Team: {cameraInfo.name || 'Unknown'} - {cameraInfo.location === 'defence' ? 'Defence' : 'Offence'}
+            </Typography>
+          </Box>
+        )}
 
         {/* Connection Form */}
         <Paper sx={{ p: 3, mb: 3 }}>
@@ -335,6 +379,7 @@ const DashboardPage = () => {
                     objects={allObjects}
                     imagePath={filteredDetections[0]?.image_path}
                     detections={filteredDetections}
+                    cameraLocation={cameraInfo?.location}
                   />
                 </Box>
               </Paper>

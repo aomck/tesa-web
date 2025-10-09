@@ -37,6 +37,7 @@ export const useSocket = (camId: string, enabled: boolean) => {
       setRealtimeData({
         id: Date.now(),
         cam_id: data.cam_id,
+        camera: data.camera,
         timestamp: data.timestamp,
         image_path: data.image.path,
         objects: data.objects,

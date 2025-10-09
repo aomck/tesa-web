@@ -7,10 +7,16 @@ import axios from 'axios';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
+const LOCATIONS = {
+  defence: { lng: 101.166279, lat: 14.297567 },
+  offence: { lng: 101.171298, lat: 14.286451 },
+};
+
 interface MapPickerProps {
   lat: number;
   lng: number;
   onLocationChange: (lat: number, lng: number) => void;
+  cameraLocation?: string;
 }
 
 interface SearchResult {
@@ -19,7 +25,7 @@ interface SearchResult {
   center: [number, number];
 }
 
-const MapPicker = ({ lat, lng, onLocationChange }: MapPickerProps) => {
+const MapPicker = ({ lat, lng, onLocationChange, cameraLocation }: MapPickerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
@@ -36,7 +42,7 @@ const MapPicker = ({ lat, lng, onLocationChange }: MapPickerProps) => {
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-streets-v12',
       center: [lng, lat],
-      zoom: 12,
+      zoom: 15,
     });
 
     // Add navigation controls
@@ -80,6 +86,30 @@ const MapPicker = ({ lat, lng, onLocationChange }: MapPickerProps) => {
       map.current.setCenter([lng, lat]);
     }
   }, [lat, lng, initialized]);
+
+  // Update map when camera location changes
+  useEffect(() => {
+    if (map.current && marker.current && initialized && cameraLocation) {
+      let targetLng = lng;
+      let targetLat = lat;
+
+      if (cameraLocation === 'defence') {
+        targetLng = LOCATIONS.defence.lng;
+        targetLat = LOCATIONS.defence.lat;
+      } else if (cameraLocation === 'offence') {
+        targetLng = LOCATIONS.offence.lng;
+        targetLat = LOCATIONS.offence.lat;
+      }
+
+      marker.current.setLngLat([targetLng, targetLat]);
+      map.current.flyTo({
+        center: [targetLng, targetLat],
+        zoom: 15,
+        duration: 1000,
+      });
+      onLocationChange(targetLat, targetLng);
+    }
+  }, [cameraLocation, initialized]);
 
   const handleSearch = async (query: string) => {
     if (query.length < 3) {
